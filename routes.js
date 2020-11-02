@@ -98,6 +98,7 @@ routers.post('/register', upload.single('avatar'), (req, res) => {
 });
 
 // Routes Product
+// Get all products
 routers.get('/products', async (req, res) => {
 	// Check if database is connect
 	if (client.isConnected()) {
@@ -123,11 +124,14 @@ routers.get('/products', async (req, res) => {
 	}
 });
 
+// Get single product
 routers.get('/product/:id', async (req, res) => {
 	if (client.isConnected()) {
 		const db = client.db('latihan');
+		const id = req.params.id
+		const _id = (ObjectId.isValid(id)) ? ObjectId(id) : id
 		const product = await db.collection('products').findOne({
-			_id: ObjectId(req.params.id)
+			_id: _id
 		});
 		res.send({
 			status: 'success',
@@ -142,7 +146,8 @@ routers.get('/product/:id', async (req, res) => {
 	}
 });
 
-routers.post('/product', async (req, res) => {
+// Create product
+routers.post('/product', multer().none(), async (req, res) => {
 	if (client.isConnected()) {
 		const { name, price, stock, status } = req.body;
 		const db = client.db('latihan');
@@ -156,7 +161,7 @@ routers.post('/product', async (req, res) => {
 			res.send({
 				status: 'success',
 				message: 'tambah product success',
-				data: result
+				data: result.ops
 			});
 		} else {
 			res.send({
@@ -172,21 +177,68 @@ routers.post('/product', async (req, res) => {
 	}
 });
 
-routers.put('/product/:id', (req, res) => {
+// Update product
+routers.put('/product/:id', async (req, res) => {
 	if (client.isConnected()) {
+		const { name, price, stock, status } = req.body
 		const db = client.db('latihan');
-		res.send('mengupdate data product');
+		const id = req.params.id
+		const _id = (ObjectId.isValid(id)) ? ObjectId(id) : id
+		const result = await db.collection('products').updateOne(
+			{ _id: _id },
+			{
+				$set: {
+					name: name,
+					price: price,
+					stock: stock,
+					status: status
+				}
+			}
+		)
+		if (result.matchedCount == 1) {
+			res.send({
+				status: 'success',
+				message: 'update product success'
+			})
+		} else {
+			res.send({
+				status: 'warning',
+				message: 'update product gagal'
+			})
+		}
 	} else {
-		res.send('koneksi database gagal');
+		res.send({
+			status: 'error',
+			message: 'koneksi database gagal'
+		});
 	}
 });
 
-routers.delete('/product/:id', (req, res) => {
+// Delete product
+routers.delete('/product/:id', async (req, res) => {
 	if (client.isConnected()) {
 		const db = client.db('latihan');
-		res.send('menghapus data product');
+		const id = req.params.id
+		const _id = (ObjectId.isValid(id)) ? ObjectId(id) : id
+		const result = await db.collection('products').deleteOne(
+			{ _id: _id }
+		)
+		if (result.deletedCount == 1) {
+			res.send({
+				status: 'success',
+				message: 'delete product success'
+			})
+		} else {
+			res.send({
+				status: 'warning',
+				message: 'delete product gagal'
+			});
+		}
 	} else {
-		res.send('koneksi database gagal');
+		res.send({
+			status: 'error',
+			message: 'koneksi database gagal'
+		});
 	}
 });
 
