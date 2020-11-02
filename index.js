@@ -17,7 +17,7 @@ const log = (req, res, next) => {
 
 app.use(log);
 
-const routers = require('./routers');
+const routers = require('./routes');
 app.use(routers);
 
 // Middleware menangani 404
