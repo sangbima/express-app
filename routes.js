@@ -2,6 +2,8 @@ const express = require('express');
 const routers = express.Router();
 const path = require('path');
 const multer = require('multer');
+const client = require('./connection');
+const ObjectId = require('mongodb').ObjectId;
 const imageFilter = (req, file, cb) => {
 	if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
 		return cb(null, false);
@@ -93,6 +95,99 @@ routers.post('/register', upload.single('avatar'), (req, res) => {
 	const name = req.body.name;
 	const avatar = req.file;
 	res.send({ name: name, avatar: avatar });
+});
+
+// Routes Product
+routers.get('/products', async (req, res) => {
+	// Check if database is connect
+	if (client.isConnected()) {
+		const db = client.db('latihan');
+		const products = await db.collection('products').find().toArray();
+		if (products.length > 0) {
+			res.send({
+				status: 'success',
+				message: 'list products',
+				data: products
+			});
+		} else {
+			res.send({
+				status: 'success',
+				message: 'product not found'
+			});
+		}
+	} else {
+		res.send({
+			status: 'error',
+			message: 'koneksi database gagal'
+		});
+	}
+});
+
+routers.get('/product/:id', async (req, res) => {
+	if (client.isConnected()) {
+		const db = client.db('latihan');
+		const product = await db.collection('products').findOne({
+			_id: ObjectId(req.params.id)
+		});
+		res.send({
+			status: 'success',
+			message: 'single product',
+			data: product
+		});
+	} else {
+		res.send({
+			status: 'error',
+			message: 'koneksi database gagal'
+		});
+	}
+});
+
+routers.post('/product', async (req, res) => {
+	if (client.isConnected()) {
+		const { name, price, stock, status } = req.body;
+		const db = client.db('latihan');
+		const result = await db.collection('products').insertOne({
+			name: name,
+			price: price,
+			stock: stock,
+			status: status
+		});
+		if (result.insertedCount == 1) {
+			res.send({
+				status: 'success',
+				message: 'tambah product success',
+				data: result
+			});
+		} else {
+			res.send({
+				status: 'warning',
+				message: 'tambah product gagal'
+			});
+		}
+	} else {
+		res.send({
+			status: 'error',
+			message: 'koneksi database gagal'
+		});
+	}
+});
+
+routers.put('/product/:id', (req, res) => {
+	if (client.isConnected()) {
+		const db = client.db('latihan');
+		res.send('mengupdate data product');
+	} else {
+		res.send('koneksi database gagal');
+	}
+});
+
+routers.delete('/product/:id', (req, res) => {
+	if (client.isConnected()) {
+		const db = client.db('latihan');
+		res.send('menghapus data product');
+	} else {
+		res.send('koneksi database gagal');
+	}
 });
 
 module.exports = routers;
