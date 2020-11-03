@@ -2,7 +2,10 @@ const express = require('express');
 const routers = express.Router();
 const path = require('path');
 const multer = require('multer');
-const client = require('./connection');
+
+require('./connection');
+const Product = require('./Product')
+
 const ObjectId = require('mongodb').ObjectId;
 const imageFilter = (req, file, cb) => {
 	if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
@@ -101,144 +104,139 @@ routers.post('/register', upload.single('avatar'), (req, res) => {
 // Get all products
 routers.get('/products', async (req, res) => {
 	// Check if database is connect
-	if (client.isConnected()) {
-		const db = client.db('latihan');
-		const products = await db.collection('products').find().toArray();
-		if (products.length > 0) {
-			res.send({
-				status: 'success',
-				message: 'list products',
-				data: products
-			});
-		} else {
-			res.send({
-				status: 'success',
-				message: 'product not found'
-			});
-		}
+	const products = await Product.find()
+	if(products.length > 0) {
+		res.send({
+			status: 'success',
+			message: 'list products ditemukan',
+			data: products
+		})
 	} else {
 		res.send({
-			status: 'error',
-			message: 'koneksi database gagal'
-		});
+			status: 'success',
+			message: 'list products tidak ditemukan'
+		})
 	}
 });
 
 // Get single product
-routers.get('/product/:id', async (req, res) => {
-	if (client.isConnected()) {
-		const db = client.db('latihan');
-		const id = req.params.id
-		const _id = (ObjectId.isValid(id)) ? ObjectId(id) : id
-		const product = await db.collection('products').findOne({
-			_id: _id
-		});
+routers.get('/products/:id', async (req, res) => {
+	const id = req.params.id
+	const _id = (ObjectId.isValid(id)) ? ObjectId(id) : id
+
+	const product = await Product.findById(_id)
+	if (product) {
 		res.send({
 			status: 'success',
-			message: 'single product',
+			message: 'single product ditemukan',
 			data: product
-		});
+		})
 	} else {
 		res.send({
-			status: 'error',
-			message: 'koneksi database gagal'
-		});
+			status: 'warning',
+			message: 'product tidak ditemukan'
+		})
 	}
 });
 
 // Create product
-routers.post('/product', multer().none(), async (req, res) => {
-	if (client.isConnected()) {
-		const { name, price, stock, status } = req.body;
-		const db = client.db('latihan');
-		const result = await db.collection('products').insertOne({
+routers.post('/products', multer().none(), async (req, res) => {
+	const { name, price, stock, status } = req.body;
+	try {
+		const product = await Product.create({
 			name: name,
 			price: price,
 			stock: stock,
 			status: status
-		});
-		if (result.insertedCount == 1) {
+		})
+
+		if (product) {
 			res.send({
 				status: 'success',
 				message: 'tambah product success',
-				data: result.ops
-			});
+				data: product
+			})
 		} else {
 			res.send({
 				status: 'warning',
 				message: 'tambah product gagal'
-			});
+			})
 		}
-	} else {
+	} catch (error) {
 		res.send({
 			status: 'error',
-			message: 'koneksi database gagal'
-		});
+			message: error.message
+		})
 	}
 });
 
 // Update product
-routers.put('/product/:id', async (req, res) => {
-	if (client.isConnected()) {
-		const { name, price, stock, status } = req.body
-		const db = client.db('latihan');
-		const id = req.params.id
-		const _id = (ObjectId.isValid(id)) ? ObjectId(id) : id
-		const result = await db.collection('products').updateOne(
+routers.put('/products/:id', async (req, res) => {
+	const { name, price, stock, status } = req.body
+	const id = req.params.id
+	const _id = (ObjectId.isValid(id)) ? ObjectId(id) : id
+	
+	try {
+		const result = await Product.updateOne(
 			{ _id: _id },
 			{
-				$set: {
-					name: name,
-					price: price,
-					stock: stock,
-					status: status
-				}
-			}
+				name: name,
+				price: price,
+				stock: stock,
+				status: status
+			},
+			{ runValidators: true }
 		)
-		if (result.matchedCount == 1) {
+
+		if (result.ok == 1) {
 			res.send({
 				status: 'success',
-				message: 'update product success'
+				message: 'update product success',
+				data: result
 			})
 		} else {
 			res.send({
 				status: 'warning',
-				message: 'update product gagal'
+				message: 'update product gagal',
+				data: result
 			})
 		}
-	} else {
+	} catch (error) {
 		res.send({
 			status: 'error',
-			message: 'koneksi database gagal'
-		});
+			message: error.message
+		})
 	}
 });
 
 // Delete product
-routers.delete('/product/:id', async (req, res) => {
-	if (client.isConnected()) {
-		const db = client.db('latihan');
-		const id = req.params.id
-		const _id = (ObjectId.isValid(id)) ? ObjectId(id) : id
-		const result = await db.collection('products').deleteOne(
+routers.delete('/products/:id', async (req, res) => {
+	const id = req.params.id
+	const _id = (ObjectId.isValid(id)) ? ObjectId(id) : id
+
+	try {
+		const result = await Product.deleteOne(
 			{ _id: _id }
 		)
+
 		if (result.deletedCount == 1) {
 			res.send({
 				status: 'success',
-				message: 'delete product success'
+				message: 'delete product success',
+				data: result
 			})
 		} else {
 			res.send({
 				status: 'warning',
-				message: 'delete product gagal'
-			});
+				message: 'delete product gagal',
+				data: result
+			})
 		}
-	} else {
+	} catch (error) {
 		res.send({
 			status: 'error',
-			message: 'koneksi database gagal'
-		});
+			message: error.message
+		})
 	}
 });
 
