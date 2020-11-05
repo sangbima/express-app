@@ -1,7 +1,10 @@
 const express = require('express');
+const cors = require('cors')
 const app = express();
 const port = 3000;
 // const bodyParser = require('body-parser');
+
+app.use(cors())
 
 // parse x-www-form-url-encode
 app.use(express.urlencoded({ extended: true }));
